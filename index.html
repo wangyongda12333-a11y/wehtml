@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="X.Z.C 资源站——发现好用、可靠的数字工具。" />
+    <title>X.Z.C 资源站 · 发现好工具</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="announcement"><span>✦</span> 全新资源门户正在试运行，欢迎提交你的原创工具。<button id="dismissAnnouncement">×</button></div>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="#"><span><strong>X.Z.C 资源站</strong><small>X.Z.C RESOURCE HUB</small></span></a>
+        <button class="mobile-menu" id="mobileMenu" aria-label="打开菜单">☰</button>
+        <nav id="mainNav" aria-label="主导航">
+          <a class="active" href="#resources">首页</a>
+          <button data-category-link="Windows">Windows</button>
+          <button data-category-link="MacOS">MacOS</button>
+          <button data-category-link="Android">Android</button>
+          <button data-category-link="Chrome">Chrome</button>
+        </nav>
+        <div class="header-actions">
+          <button class="search-trigger" id="searchFocus" aria-label="搜索">⌕</button>
+          <button class="login-button" id="loginButton">会员登录</button>
+          <button class="user-button" id="userButton" hidden><span id="userInitial">U</span><em id="userName">用户</em></button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-inner">
+          <div class="hero-copy">
+            <p class="eyebrow">CURATED DIGITAL TOOLS</p>
+            <h1>找到真正<br /><span>值得使用</span>的工具</h1>
+            <p>独立筛选、清晰分类、持续维护。<br />让每一次下载都有明确的理由。</p>
+          </div>
+          <div class="hero-panel">
+            <label class="hero-search">
+              <span>⌕</span><input id="searchInput" type="search" placeholder="搜索工具名称或功能…" autocomplete="off" /><kbd>Enter</kbd>
+            </label>
+            <div class="trending"><span>热门搜索</span><button data-query="效率">效率</button><button data-query="图片">图片</button><button data-query="文件">文件</button></div>
+            <div class="hero-stats"><div><strong id="resourceStat">0</strong><span>精选资源</span></div><div><strong>4</strong><span>平台分类</span></div><div><strong>每日</strong><span>持续整理</span></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="category-strip" aria-label="资源分类">
+        <div class="category-inner" id="categoryStrip"></div>
+      </section>
+
+      <div class="layout" id="resources">
+        <section class="resource-section">
+          <div class="section-heading">
+            <div><p class="eyebrow">LATEST PICKS</p><h2>最近更新</h2></div>
+            <div class="filter-row" id="filterRow"></div>
+          </div>
+          <div class="resource-grid" id="resourceGrid"></div>
+          <div class="empty-state" id="emptyState" hidden><span>⌕</span><h3>没有找到相关资源</h3><p>尝试更换关键词或分类。</p></div>
+        </section>
+
+        <aside>
+          <section class="side-card welcome-card">
+            <div class="side-icon">✦</div><p class="eyebrow">WELCOME</p><h3>嗨，探索者</h3><p>我们只整理有明确用途的数字工具，希望为你节省寻找和试错的时间。</p>
+          </section>
+          <section class="side-card member-card">
+            <span class="member-orbit"></span><p class="eyebrow">X.Z.C PLUS</p><h3>解锁会员资源</h3><p>免费资源无需登录；付费资源仅限站长创建的会员账号下载。</p><button id="memberAction">会员登录 <span>→</span></button>
+          </section>
+          <section class="side-card notice-card"><div class="side-title"><h3>站点说明</h3><span>●</span></div><ul><li>所有展示内容均为原创示例</li><li>上传前请确认拥有分发权</li><li>建议下载后进行安全检查</li></ul></section>
+        </aside>
+      </div>
+    </main>
+
+    <footer><div><a class="brand footer-brand" href="#"><span><strong>X.Z.C 资源站</strong><small>X.Z.C RESOURCE HUB</small></span></a><p>为有价值的数字工具，留一个清晰入口。</p></div><div class="footer-links"><span>产品</span><a href="#resources">资源目录</a><a href="#">提交说明</a></div><div class="footer-links"><span>关于</span><a href="#">版权说明</a><a href="mailto:hello@example.com">联系我们</a></div><p class="copyright">© 2026 X.Z.C Resource Hub</p></footer>
+
+    <div class="modal-backdrop" id="authModal" hidden>
+      <section class="modal auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+        <button class="modal-close" data-close-modal>×</button><h2 id="authTitle">会员登录</h2><p id="authSubtitle">仅限站长创建的会员账号和管理员账号登录。</p>
+        <form id="authForm"><label>会员账号<input name="username" required minlength="3" maxlength="20" autocomplete="username" placeholder="请输入会员账号" /></label><label>密码<input id="authPassword" name="password" type="password" required minlength="8" autocomplete="current-password" placeholder="请输入密码" /></label><p class="form-error" id="authError"></p><button class="primary-button" type="submit">登录 <span>→</span></button></form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="detailModal" hidden>
+      <section class="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><button class="modal-close" data-close-modal>×</button><div id="detailContent"></div></section>
+    </div>
+
+    <div class="modal-backdrop" id="userModal" hidden>
+      <section class="modal user-modal" role="dialog" aria-modal="true" aria-labelledby="accountTitle"><button class="modal-close" data-close-modal>×</button><p class="eyebrow">MY ACCOUNT</p><h2 id="accountTitle">会员中心</h2><div class="account-summary"><span id="accountInitial">U</span><div><strong id="accountName">会员</strong><small id="accountRole">X.Z.C 会员</small></div></div><button class="admin-entry" id="adminEntry" hidden>进入资源管理后台 <span>→</span></button><button class="logout-button" id="logoutButton">退出登录</button></section>
+    </div>
+
+    <div class="modal-backdrop" id="adminModal" hidden>
+      <section class="modal admin-modal" role="dialog" aria-modal="true" aria-labelledby="adminTitle"><button class="modal-close" data-close-modal>×</button><div class="admin-head"><div><p class="eyebrow">ADMIN CONSOLE</p><h2 id="adminTitle">资源管理</h2></div><span>仅管理员可见</span></div><div class="admin-layout"><form id="resourceForm"><label>资源名称<input name="title" required maxlength="80" placeholder="例如：FocusFlow" /></label><div class="form-grid"><label>平台<select name="category"><option>Windows</option><option>MacOS</option><option>Android</option><option>Chrome</option></select></label><label>子分类<input name="subcategory" placeholder="效率办公" /></label></div><label>简介<textarea name="description" required maxlength="240" rows="3" placeholder="简要说明用途与特点"></textarea></label><div class="form-grid"><label>版本<input name="version" value="1.0.0" /></label><label>图标文字<input name="icon" maxlength="4" value="NEW" /></label></div><label class="file-field">资源文件（最大 10 MB）<input name="file" type="file" /></label><label class="check-field"><input name="memberOnly" type="checkbox" /> 仅会员可下载</label><p class="form-error" id="adminError"></p><button class="primary-button" type="submit">发布资源 <span>＋</span></button></form><div class="admin-resources"><h3>创建会员账号</h3><form id="memberForm" class="member-create-form"><div class="form-grid"><label>会员账号<input name="username" required minlength="3" maxlength="20" autocomplete="off" placeholder="3–20 位" /></label><label>初始密码<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="至少 8 位" /></label></div><p class="form-error" id="memberError"></p><button class="primary-button" type="submit">创建会员 <span>＋</span></button></form><h3 class="user-heading">会员账号</h3><div id="adminUserList"></div><h3 class="resource-list-heading">已发布资源</h3><div id="adminResourceList"></div></div></div></section>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
