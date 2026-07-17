@@ -1,15 +1,4 @@
 {
-  "users": [
-    {
-      "id": "b4b09f5b-e8df-41c2-a460-aff116b42100",
-      "username": "wangyongda",
-      "role": "admin",
-      "member": true,
-      "passwordHash": "fdc0546c95493ee13c01edae27414cc1dc21ff86ff6ce400f40c89d4d6bfb972a7e1be604bedd3412ed4f8ad5de2985750b1530e0aa0d001ee262a75dc39f322",
-      "salt": "c12eed0bbc05598f13513055543a4908",
-      "createdAt": "2026-07-16T07:26:06.896Z"
-    }
-  ],
   "resources": [
     {
       "id": "r1",

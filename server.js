@@ -4,8 +4,9 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 
 const ROOT = __dirname;
-const DEFAULT_DATA_DIR = path.join(ROOT, "data");
-const DEFAULT_UPLOAD_DIR = path.join(ROOT, "uploads");
+const STORAGE_DIR = process.env.STORAGE_DIR ? path.resolve(process.env.STORAGE_DIR) : ROOT;
+const DEFAULT_DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(STORAGE_DIR, "data");
+const DEFAULT_UPLOAD_DIR = process.env.UPLOAD_DIR ? path.resolve(process.env.UPLOAD_DIR) : path.join(STORAGE_DIR, "uploads");
 const MAX_BODY = 15 * 1024 * 1024;
 const sessions = new Map();
 const staticFiles = new Map([
@@ -62,7 +63,11 @@ function readBody(req) {
 function createStore(dataDir = DEFAULT_DATA_DIR) {
   const file = path.join(dataDir, "db.json");
   fs.mkdirSync(dataDir, { recursive: true });
-  if (!fs.existsSync(file)) fs.writeFileSync(file, JSON.stringify({ users: [], resources: [] }, null, 2));
+  if (!fs.existsSync(file)) {
+    const seedFile = path.join(ROOT, "data", "seed.json");
+    const seed = fs.existsSync(seedFile) ? JSON.parse(fs.readFileSync(seedFile, "utf8")) : { resources: [] };
+    fs.writeFileSync(file, JSON.stringify({ users: [], resources: seed.resources || [] }, null, 2));
+  }
   return {
     read() { return JSON.parse(fs.readFileSync(file, "utf8")); },
     write(data) {
@@ -78,10 +83,19 @@ function ensureAdmin(store) {
   data.users = (data.users || []).filter(user => user.role === "admin" || user.member === true);
   delete data.comments;
   delete data.membershipApplications;
-  if (!data.users.some(user => user.role === "admin")) {
+  let admin = data.users.find(user => user.role === "admin");
+  if (!admin) {
     const password = process.env.ADMIN_PASSWORD || "admin1234";
     const passwordData = hashPassword(password);
-    data.users.push({ id: crypto.randomUUID(), username: "admin", role: "admin", member: true, passwordHash: passwordData.hash, salt: passwordData.salt, createdAt: new Date().toISOString() });
+    admin = { id: crypto.randomUUID(), username: process.env.ADMIN_USERNAME || "admin", role: "admin", member: true, passwordHash: passwordData.hash, salt: passwordData.salt, createdAt: new Date().toISOString() };
+    data.users.push(admin);
+  } else {
+    if (process.env.ADMIN_USERNAME) admin.username = process.env.ADMIN_USERNAME;
+    if (process.env.ADMIN_PASSWORD) {
+      const passwordData = hashPassword(process.env.ADMIN_PASSWORD);
+      admin.passwordHash = passwordData.hash;
+      admin.salt = passwordData.salt;
+    }
   }
   store.write(data);
 }
@@ -95,10 +109,11 @@ function currentUser(req, store) {
 function setSession(res, userId) {
   const token = crypto.randomBytes(32).toString("hex");
   sessions.set(token, userId);
-  return `session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400`;
+  return `session=${token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=86400${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 }
 
 function createApp(options = {}) {
+  if (process.env.NODE_ENV === "production" && !process.env.ADMIN_PASSWORD) throw new Error("生产环境必须设置 ADMIN_PASSWORD");
   const store = createStore(options.dataDir);
   const uploadDir = options.uploadDir || DEFAULT_UPLOAD_DIR;
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -116,6 +131,10 @@ function createApp(options = {}) {
 
       if (req.method === "GET" && url.pathname === "/api/me") {
         json(res, 200, { user: safeUser(currentUser(req, store)) }); return;
+      }
+
+      if (req.method === "GET" && url.pathname === "/api/health") {
+        json(res, 200, { ok: true }); return;
       }
 
       if (req.method === "POST" && url.pathname === "/api/login") {
@@ -235,9 +254,10 @@ function createApp(options = {}) {
 
 if (require.main === module) {
   const port = Number(process.env.PORT || 4317);
+  const host = process.env.HOST || (process.env.NODE_ENV === "production" ? "0.0.0.0" : "127.0.0.1");
   const server = createApp();
-  server.listen(port, "127.0.0.1", () => {
-    console.log(`X.Z.C 资源站：http://127.0.0.1:${port}`);
+  server.listen(port, host, () => {
+    console.log(`X.Z.C 资源站：http://${host}:${port}`);
     if (!process.env.ADMIN_PASSWORD) console.log("本地演示管理员：admin / admin1234（公开部署前必须修改）");
   });
 }

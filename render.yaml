@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: xzc-resource-hub
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: STORAGE_DIR
+        value: /var/data
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+    disk:
+      name: xzc-data
+      mountPath: /var/data
+      sizeGB: 1
+

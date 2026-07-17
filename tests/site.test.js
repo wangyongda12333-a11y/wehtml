@@ -55,3 +55,16 @@ test("页面资源存在且提供响应式布局", () => {
   assert.match(html, /src="app\.js"/);
   assert.match(css, /@media\(max-width:700px\)/);
 });
+
+test("部署包使用公网监听、健康检查和安全忽略规则", () => {
+  const server = read("server.js");
+  const ignore = read(".gitignore");
+  const render = read("render.yaml");
+  assert.match(server, /0\.0\.0\.0/);
+  assert.match(server, /\/api\/health/);
+  assert.match(server, /ADMIN_PASSWORD/);
+  assert.match(ignore, /data\/db\.json/);
+  assert.match(ignore, /uploads\/\*/);
+  assert.match(render, /mountPath: \/var\/data/);
+  assert.match(render, /sync: false/);
+});

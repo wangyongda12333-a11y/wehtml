@@ -90,4 +90,21 @@ test("未登录用户不能访问管理接口", async t => {
   const base = await startTestServer(t, "xzc-auth-");
   assert.equal((await request(base, "/api/users")).status, 403);
   assert.equal((await request(base, "/api/resources", { method: "POST", body: "{}" })).status, 403);
+  const health = await request(base, "/api/health");
+  assert.equal(health.status, 200);
+  assert.deepEqual(await health.json(), { ok: true });
+});
+
+test("管理员账号可通过部署环境变量初始化", async t => {
+  const previousUsername = process.env.ADMIN_USERNAME;
+  const previousPassword = process.env.ADMIN_PASSWORD;
+  process.env.ADMIN_USERNAME = "cloudadmin";
+  process.env.ADMIN_PASSWORD = "cloud-password-123";
+  t.after(() => {
+    if (previousUsername === undefined) delete process.env.ADMIN_USERNAME; else process.env.ADMIN_USERNAME = previousUsername;
+    if (previousPassword === undefined) delete process.env.ADMIN_PASSWORD; else process.env.ADMIN_PASSWORD = previousPassword;
+  });
+  const base = await startTestServer(t, "xzc-env-");
+  const login = await request(base, "/api/login", { method: "POST", body: JSON.stringify({ username: "cloudadmin", password: "cloud-password-123" }) });
+  assert.equal(login.status, 200);
 });
