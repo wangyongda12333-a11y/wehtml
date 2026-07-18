@@ -256,15 +256,20 @@ async function invokeAdminUsers(payload) {
   return supabaseRequest(`/functions/v1/${encodeURIComponent(functionName)}`, { method: "POST", auth: true, body: payload });
 }
 
-async function removeStorageObject(path) {
+async function removeStorageObject(path, { ignoreMissing = false } = {}) {
   if (!path) return;
-  await supabaseRequest(`/storage/v1/object/${bucket}/${encodedStoragePath(path)}`, { method: "DELETE", auth: true });
+  try {
+    await supabaseRequest(`/storage/v1/object/${bucket}/${encodedStoragePath(path)}`, { method: "DELETE", auth: true });
+  } catch (error) {
+    if (ignoreMissing && /object not found|not[_ -]?found/i.test(friendlyError(error))) return;
+    throw error;
+  }
 }
 
 async function deleteResource(id) {
   const resource = state.resources.find(item => item.id === id);
   if (!resource) return;
-  if (resource.filePath) await removeStorageObject(resource.filePath);
+  if (resource.filePath) await removeStorageObject(resource.filePath, { ignoreMissing: true });
   await supabaseRequest(`/rest/v1/resources?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", auth: true, headers: { Prefer: "return=minimal" } });
   await loadResources();
   await renderAdminResources();
