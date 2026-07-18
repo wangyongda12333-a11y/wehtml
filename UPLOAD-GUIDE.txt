@@ -1,0 +1,30 @@
+X.Z.C GitHub Pages 免费版上传说明
+
+1. 把要给用户下载的文件放进 downloads 文件夹，例如：
+   downloads/focusflow.zip
+
+2. 打开 resources.json，为文件新增或修改一个资源条目。
+
+3. file 字段填写相对路径，例如：
+   "file": "downloads/focusflow.zip"
+
+4. content 字段可以填写详细文本、安装方法和使用说明。
+
+5. 用自动更新程序上传整个文件夹内容到 GitHub 仓库根目录。
+
+示例：
+{
+  "id": "focusflow",
+  "title": "FocusFlow 专注计时器",
+  "description": "资源简介",
+  "content": "详细介绍和安装方法",
+  "category": "Windows",
+  "subcategory": "效率办公",
+  "version": "1.0.0",
+  "color": "blue",
+  "icon": "FF",
+  "createdAt": "2026-07-17T00:00:00.000Z",
+  "file": "downloads/focusflow.zip"
+}
+
+注意：GitHub Pages 中的所有文件都是公开的，不能用于真正的会员或付费下载。

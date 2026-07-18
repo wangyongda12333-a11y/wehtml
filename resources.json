@@ -1,0 +1,30 @@
+{
+  "resources": [
+    {
+      "id": "r1",
+      "title": "FocusFlow 专注计时器",
+      "description": "轻量的桌面专注工具，用简单节奏帮助你进入工作状态。",
+      "content": "这里可以填写更长的资源介绍、安装方法和使用说明。",
+      "category": "Windows",
+      "subcategory": "效率办公",
+      "version": "2.4.0",
+      "color": "blue",
+      "icon": "FF",
+      "createdAt": "2026-07-12T10:00:00.000Z",
+      "file": null
+    },
+    {
+      "id": "r2",
+      "title": "PixelMint 图像整理器",
+      "description": "快速整理、标记和查找本地图片素材的创意工作台。",
+      "content": "上传文件后，把 file 改成 downloads 目录中的文件路径。",
+      "category": "MacOS",
+      "subcategory": "图像处理",
+      "version": "1.8.2",
+      "color": "violet",
+      "icon": "PM",
+      "createdAt": "2026-07-09T10:00:00.000Z",
+      "file": null
+    }
+  ]
+}
