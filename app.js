@@ -306,7 +306,8 @@ $("#searchInput").addEventListener("input", event => { state.query = event.targe
 
 $("#authForm").addEventListener("submit", async event => {
   event.preventDefault();
-  const data = Object.fromEntries(new FormData(event.currentTarget));
+  const formElement = event.currentTarget;
+  const data = Object.fromEntries(new FormData(formElement));
   try {
     if (!configReady()) throw new Error("请先在 supabase-config.js 填写项目 URL 和 Publishable Key");
     const response = await fetch(`${config.url}/auth/v1/token?grant_type=password`, {
@@ -320,7 +321,7 @@ $("#authForm").addEventListener("submit", async event => {
     await loadUser();
     if (!state.user) throw new Error("账号没有会员权限");
     closeModals();
-    event.currentTarget.reset();
+    formElement.reset();
     showToast("登录成功");
   } catch (error) { $("#authError").textContent = friendlyError(error); }
 });
@@ -340,10 +341,11 @@ $("#adminEntry").addEventListener("click", async () => {
 
 $("#memberForm").addEventListener("submit", async event => {
   event.preventDefault();
-  const payload = Object.fromEntries(new FormData(event.currentTarget));
+  const formElement = event.currentTarget;
+  const payload = Object.fromEntries(new FormData(formElement));
   try {
     await invokeAdminUsers({ action: "create", username: payload.username, password: payload.password });
-    event.currentTarget.reset();
+    formElement.reset();
     $("#memberError").textContent = "";
     showToast("会员账号已创建");
     await renderAdminResources();
@@ -352,14 +354,16 @@ $("#memberForm").addEventListener("submit", async event => {
 
 $("#resourceForm").addEventListener("submit", async event => {
   event.preventDefault();
-  const form = new FormData(event.currentTarget);
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement);
   const file = form.get("file");
   let filePath = null;
+  let resourceSaved = false;
   try {
     if (file?.size > 50 * 1024 * 1024) throw new Error("免费版单个文件不能超过 50 MB");
     if (file?.size) {
-      const safeName = file.name.replace(/[^\w.\-\u4e00-\u9fa5]/g, "_");
-      filePath = `${crypto.randomUUID()}-${safeName}`;
+      const extension = file.name.match(/\.[A-Za-z0-9]{1,10}$/)?.[0].toLowerCase() || "";
+      filePath = `${crypto.randomUUID()}${extension}`;
       await supabaseRequest(`/storage/v1/object/${bucket}/${encodedStoragePath(filePath)}`, { method: "POST", auth: true, json: false, body: file, headers: { "Content-Type": file.type || "application/octet-stream", "x-upsert": "false" } });
     }
     const payload = {
@@ -378,13 +382,14 @@ $("#resourceForm").addEventListener("submit", async event => {
       file_size: file?.size || null,
     };
     await supabaseRequest("/rest/v1/resources", { method: "POST", auth: true, body: payload, headers: { Prefer: "return=minimal" } });
-    event.currentTarget.reset();
+    resourceSaved = true;
+    formElement.reset();
     $("#adminError").textContent = "";
     showToast("资源发布成功");
     await loadResources();
     await renderAdminResources();
   } catch (error) {
-    if (filePath) { try { await removeStorageObject(filePath); } catch { /* 保留原始错误 */ } }
+    if (filePath && !resourceSaved) { try { await removeStorageObject(filePath); } catch { /* 保留原始错误 */ } }
     $("#adminError").textContent = friendlyError(error);
   }
 });
