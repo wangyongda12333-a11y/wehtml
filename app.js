@@ -6,9 +6,10 @@ const categories = [
 ];
 
 const config = window.XZC_SUPABASE || {};
-const state = { resources: [], category: "全部", query: "", user: null, session: null };
+const state = { resources: [], category: "全部", query: "", user: null, session: null, editingResourceId: null };
 const sessionKey = "xzc_supabase_session";
 const bucket = "resources";
+const coverBucket = "resource-covers";
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
@@ -25,6 +26,8 @@ function friendlyError(error, fallback = "请求失败") {
   if (/invalid login credentials/i.test(message)) return "会员账号或密码错误";
   if (/row-level security|permission denied|not allowed/i.test(message)) return "没有执行此操作的权限";
   if (/failed to fetch|networkerror/i.test(message)) return "无法连接 Supabase，请检查配置和网络";
+  if (/object not found|not[_ -]?found/i.test(message)) return "文件不存在，请管理员在编辑界面重新上传资源文件";
+  if (/cover_path|schema cache/i.test(message)) return "请先在 Supabase SQL Editor 执行封面功能迁移脚本";
   return String(message);
 }
 
@@ -119,9 +122,22 @@ function toResource(row) {
     memberOnly: row.member_only,
     downloads: Number(row.downloads || 0),
     createdAt: row.created_at,
+    updatedAt: row.updated_at || row.created_at,
     filePath: row.file_path,
     fileName: row.file_name,
+    coverPath: row.cover_path,
+    coverName: row.cover_name,
   };
+}
+
+function publicCoverURL(path) {
+  if (!path) return "";
+  return `${config.url}/storage/v1/object/public/${coverBucket}/${encodedStoragePath(path)}`;
+}
+
+function resourceArtwork(resource, variant = "card") {
+  if (resource.coverPath) return `<img class="resource-cover ${variant}" src="${escapeHTML(publicCoverURL(resource.coverPath))}" alt="${escapeHTML(resource.title)} 封面" loading="lazy" />`;
+  return `<div class="resource-icon ${escapeHTML(resource.color)}">${escapeHTML(resource.icon)}</div>`;
 }
 
 function renderCategories() {
@@ -140,7 +156,7 @@ function visibleResources() {
 
 function resourceCard(resource) {
   return `<article class="resource-card" data-resource="${escapeHTML(resource.id)}" tabindex="0" aria-label="查看 ${escapeHTML(resource.title)}">
-    <div class="resource-icon ${escapeHTML(resource.color)}">${escapeHTML(resource.icon)}</div>
+    ${resourceArtwork(resource)}
     <div><div class="resource-top"><div class="resource-tags"><span>${escapeHTML(resource.category)}</span><span>${escapeHTML(resource.subcategory)}</span>${resource.memberOnly ? '<span class="plus-tag">X.Z.C+</span>' : ""}</div></div>
     <h3>${escapeHTML(resource.title)}</h3><p>${escapeHTML(resource.description)}</p><div class="resource-meta"><span>v${escapeHTML(resource.version)}</span><span>↓ ${resource.downloads.toLocaleString("zh-CN")}</span></div></div>
   </article>`;
@@ -156,7 +172,7 @@ function renderResources() {
 
 async function loadResources() {
   try {
-    const rows = await supabaseRequest("/rest/v1/resources?select=*&order=created_at.desc");
+    const rows = await supabaseRequest("/rest/v1/resources?select=*&order=created_at.desc", { auth: Boolean(state.session) });
     state.resources = Array.isArray(rows) ? rows.map(toResource) : [];
     renderResources();
   } catch (error) {
@@ -208,7 +224,7 @@ function openResource(id) {
   if (!resource) return;
   const content = resource.content ? `<div class="resource-content">${escapeHTML(resource.content)}</div>` : "";
   const action = resource.filePath ? `<button class="download-button" data-download="${escapeHTML(resource.id)}">${resource.memberOnly ? "X.Z.C 会员下载" : "免费下载"} ↓</button>` : '<button class="download-button" disabled>文件暂未上传</button>';
-  $("#detailContent").innerHTML = `<div class="detail-hero"><div class="resource-icon ${escapeHTML(resource.color)}">${escapeHTML(resource.icon)}</div><div><div class="resource-tags"><span>${escapeHTML(resource.category)}</span><span>${escapeHTML(resource.subcategory)}</span>${resource.memberOnly ? '<span class="plus-tag">X.Z.C+</span>' : ""}</div><h2 id="detailTitle">${escapeHTML(resource.title)}</h2><p>${escapeHTML(resource.description)}</p></div></div><div class="detail-info"><div><strong>v${escapeHTML(resource.version)}</strong><span>当前版本</span></div><div><strong>${resource.downloads.toLocaleString("zh-CN")}</strong><span>累计下载</span></div><div><strong>${new Date(resource.createdAt).toLocaleDateString("zh-CN")}</strong><span>更新时间</span></div></div>${content}${action}`;
+  $("#detailContent").innerHTML = `<div class="detail-hero">${resourceArtwork(resource, "detail")}<div><div class="resource-tags"><span>${escapeHTML(resource.category)}</span><span>${escapeHTML(resource.subcategory)}</span>${resource.memberOnly ? '<span class="plus-tag">X.Z.C+</span>' : ""}</div><h2 id="detailTitle">${escapeHTML(resource.title)}</h2><p>${escapeHTML(resource.description)}</p></div></div><div class="detail-info"><div><strong>v${escapeHTML(resource.version)}</strong><span>当前版本</span></div><div><strong>${resource.downloads.toLocaleString("zh-CN")}</strong><span>累计下载</span></div><div><strong>${new Date(resource.updatedAt).toLocaleDateString("zh-CN")}</strong><span>更新时间</span></div></div>${content}${action}`;
   openModal("#detailModal");
 }
 
@@ -247,8 +263,69 @@ function handleAuthShortcut() { if (window.location.hash === "#login") openAuth(
 async function renderAdminResources() {
   if (state.user?.role !== "admin") throw new Error("需要管理员权限");
   const profiles = await supabaseRequest("/rest/v1/profiles?select=id,username,role,created_at&role=in.(member,admin)&order=created_at.asc", { auth: true });
-  $("#adminResourceList").innerHTML = state.resources.map(item => `<div class="admin-item"><span class="resource-icon ${escapeHTML(item.color)}">${escapeHTML(item.icon)}</span><div><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.category)} · v${escapeHTML(item.version)}</small></div><button data-delete="${escapeHTML(item.id)}">删除</button></div>`).join("") || "<p>暂无资源</p>";
+  $("#adminResourceList").innerHTML = state.resources.map(item => `<div class="admin-item">${resourceArtwork(item, "admin")}<div><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.category)} · v${escapeHTML(item.version)} · ${item.memberOnly ? "仅会员" : "公开"}</small></div><div class="admin-item-actions"><button data-edit="${escapeHTML(item.id)}">编辑</button><button data-delete="${escapeHTML(item.id)}">删除</button></div></div>`).join("") || "<p>暂无资源</p>";
   $("#adminUserList").innerHTML = profiles.map(user => `<div class="admin-user"><span>${escapeHTML(user.username.slice(0, 1).toUpperCase())}</span><div><strong>${escapeHTML(user.username)}</strong><small>${user.role === "admin" ? "管理员" : "X.Z.C 会员"}</small></div>${user.role === "admin" ? "" : `<button class="member-toggle" data-delete-user="${escapeHTML(user.id)}">删除会员</button>`}</div>`).join("");
+}
+
+function resetResourceForm() {
+  const form = $("#resourceForm");
+  if (previewSelectedCover.url) {
+    URL.revokeObjectURL(previewSelectedCover.url);
+    previewSelectedCover.url = null;
+  }
+  form.reset();
+  state.editingResourceId = null;
+  $("#resourceFormTitle").textContent = "发布新资源";
+  $("#resourceSubmitText").textContent = "发布资源";
+  $("#cancelResourceEdit").hidden = true;
+  $("#resourceFileLabel").textContent = "资源文件（最大 50 MB）";
+  $("#resourceFileHint").textContent = "新建资源时可不上传附件";
+  $("#coverPreview").hidden = true;
+  $("#coverPreviewImage").removeAttribute("src");
+  delete $("#coverPreviewImage").dataset.existingSrc;
+  $("#adminError").textContent = "";
+}
+
+function startEditResource(id) {
+  const resource = state.resources.find(item => item.id === id);
+  if (!resource) return;
+  const form = $("#resourceForm");
+  state.editingResourceId = id;
+  form.elements.title.value = resource.title;
+  form.elements.category.value = resource.category;
+  form.elements.subcategory.value = resource.subcategory;
+  form.elements.description.value = resource.description;
+  form.elements.content.value = resource.content;
+  form.elements.version.value = resource.version;
+  form.elements.icon.value = resource.icon;
+  form.elements.memberOnly.value = String(resource.memberOnly);
+  form.elements.file.value = "";
+  form.elements.cover.value = "";
+  form.elements.removeCover.checked = false;
+  $("#resourceFormTitle").textContent = `编辑：${resource.title}`;
+  $("#resourceSubmitText").textContent = "保存更改";
+  $("#cancelResourceEdit").hidden = false;
+  $("#resourceFileLabel").textContent = "替换资源文件（最大 50 MB，可选）";
+  $("#resourceFileHint").textContent = resource.fileName ? `当前文件：${resource.fileName}` : "当前没有可下载文件，可在这里补传";
+  $("#coverPreview").hidden = !resource.coverPath;
+  if (resource.coverPath) {
+    $("#coverPreviewImage").src = publicCoverURL(resource.coverPath);
+    $("#coverPreviewImage").dataset.existingSrc = publicCoverURL(resource.coverPath);
+  } else {
+    $("#coverPreviewImage").removeAttribute("src");
+    delete $("#coverPreviewImage").dataset.existingSrc;
+  }
+  $("#adminError").textContent = "";
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function previewSelectedCover(file) {
+  if (previewSelectedCover.url) URL.revokeObjectURL(previewSelectedCover.url);
+  if (!file?.size) return;
+  previewSelectedCover.url = URL.createObjectURL(file);
+  $("#coverPreviewImage").src = previewSelectedCover.url;
+  $("#coverPreview").hidden = false;
+  $("#resourceForm").elements.removeCover.checked = false;
 }
 
 async function invokeAdminUsers(payload) {
@@ -256,10 +333,14 @@ async function invokeAdminUsers(payload) {
   return supabaseRequest(`/functions/v1/${encodeURIComponent(functionName)}`, { method: "POST", auth: true, body: payload });
 }
 
-async function removeStorageObject(path, { ignoreMissing = false } = {}) {
+async function uploadStorageObject(storageBucket, path, file) {
+  await supabaseRequest(`/storage/v1/object/${storageBucket}/${encodedStoragePath(path)}`, { method: "POST", auth: true, json: false, body: file, headers: { "Content-Type": file.type || "application/octet-stream", "x-upsert": "false" } });
+}
+
+async function removeStorageObject(path, { ignoreMissing = false, storageBucket = bucket } = {}) {
   if (!path) return;
   try {
-    await supabaseRequest(`/storage/v1/object/${bucket}/${encodedStoragePath(path)}`, { method: "DELETE", auth: true });
+    await supabaseRequest(`/storage/v1/object/${storageBucket}/${encodedStoragePath(path)}`, { method: "DELETE", auth: true });
   } catch (error) {
     if (ignoreMissing && /object not found|not[_ -]?found/i.test(friendlyError(error))) return;
     throw error;
@@ -270,6 +351,7 @@ async function deleteResource(id) {
   const resource = state.resources.find(item => item.id === id);
   if (!resource) return;
   if (resource.filePath) await removeStorageObject(resource.filePath, { ignoreMissing: true });
+  if (resource.coverPath) await removeStorageObject(resource.coverPath, { ignoreMissing: true, storageBucket: coverBucket });
   await supabaseRequest(`/rest/v1/resources?id=eq.${encodeURIComponent(id)}`, { method: "DELETE", auth: true, headers: { Prefer: "return=minimal" } });
   await loadResources();
   await renderAdminResources();
@@ -281,6 +363,7 @@ document.addEventListener("click", async event => {
   const query = event.target.closest("[data-query]");
   const resource = event.target.closest("[data-resource]");
   const download = event.target.closest("[data-download]");
+  const editButton = event.target.closest("[data-edit]");
   const deleteButton = event.target.closest("[data-delete]");
   const deleteUserButton = event.target.closest("[data-delete-user]");
   if (category) setCategory(category.dataset.category);
@@ -288,10 +371,11 @@ document.addEventListener("click", async event => {
   if (query) { state.query = query.dataset.query; $("#searchInput").value = state.query; renderResources(); }
   if (resource) openResource(resource.dataset.resource);
   if (download) downloadResource(download.dataset.download);
+  if (editButton) startEditResource(editButton.dataset.edit);
   if (event.target.closest("[data-close-modal]")) closeModals();
   if (event.target.classList.contains("modal-backdrop")) closeModals();
   if (deleteButton && confirm("确定删除这个资源及其文件吗？")) {
-    try { await deleteResource(deleteButton.dataset.delete); showToast("资源已删除"); }
+    try { await deleteResource(deleteButton.dataset.delete); if (state.editingResourceId === deleteButton.dataset.delete) resetResourceForm(); showToast("资源已删除"); }
     catch (error) { showToast(friendlyError(error)); }
   }
   if (deleteUserButton && confirm("确定删除这个会员账号吗？")) {
@@ -308,6 +392,18 @@ $("#searchFocus").addEventListener("click", () => { $("#searchInput").focus(); w
 $("#dismissAnnouncement").addEventListener("click", event => event.currentTarget.parentElement.remove());
 $("#memberAction").addEventListener("click", () => state.user ? openModal("#userModal") : openAuth());
 $("#searchInput").addEventListener("input", event => { state.query = event.target.value.trim(); renderResources(); });
+$("#cancelResourceEdit").addEventListener("click", resetResourceForm);
+$("#resourceForm").elements.cover.addEventListener("change", event => previewSelectedCover(event.target.files?.[0]));
+$("#resourceForm").elements.removeCover.addEventListener("change", event => {
+  const image = $("#coverPreviewImage");
+  if (event.target.checked) {
+    $("#resourceForm").elements.cover.value = "";
+    image.removeAttribute("src");
+  } else if (image.dataset.existingSrc) {
+    image.src = image.dataset.existingSrc;
+  }
+  $("#coverPreview").hidden = !event.target.checked && !image.getAttribute("src");
+});
 
 $("#authForm").addEventListener("submit", async event => {
   event.preventDefault();
@@ -325,6 +421,7 @@ $("#authForm").addEventListener("submit", async event => {
     saveSession(result);
     await loadUser();
     if (!state.user) throw new Error("账号没有会员权限");
+    await loadResources();
     closeModals();
     formElement.reset();
     showToast("登录成功");
@@ -335,6 +432,7 @@ $("#logoutButton").addEventListener("click", async () => {
   try { if (state.session) await supabaseRequest("/auth/v1/logout", { method: "POST", auth: true }); } catch { /* 本地会话仍然清除 */ }
   clearSession();
   renderUser();
+  await loadResources();
   closeModals();
   showToast("已退出登录");
 });
@@ -361,15 +459,26 @@ $("#resourceForm").addEventListener("submit", async event => {
   event.preventDefault();
   const formElement = event.currentTarget;
   const form = new FormData(formElement);
+  const editingResource = state.resources.find(item => item.id === state.editingResourceId) || null;
   const file = form.get("file");
-  let filePath = null;
+  const cover = form.get("cover");
+  const removeCover = form.get("removeCover") === "on";
+  let newFilePath = null;
+  let newCoverPath = null;
   let resourceSaved = false;
   try {
     if (file?.size > 50 * 1024 * 1024) throw new Error("免费版单个文件不能超过 50 MB");
+    if (cover?.size > 5 * 1024 * 1024) throw new Error("封面照片不能超过 5 MB");
+    if (cover?.size && !["image/jpeg", "image/png", "image/webp", "image/gif"].includes(cover.type)) throw new Error("封面仅支持 JPG、PNG、WebP 或 GIF");
     if (file?.size) {
       const extension = file.name.match(/\.[A-Za-z0-9]{1,10}$/)?.[0].toLowerCase() || "";
-      filePath = `${crypto.randomUUID()}${extension}`;
-      await supabaseRequest(`/storage/v1/object/${bucket}/${encodedStoragePath(filePath)}`, { method: "POST", auth: true, json: false, body: file, headers: { "Content-Type": file.type || "application/octet-stream", "x-upsert": "false" } });
+      newFilePath = `${crypto.randomUUID()}${extension}`;
+      await uploadStorageObject(bucket, newFilePath, file);
+    }
+    if (cover?.size) {
+      const extension = cover.name.match(/\.(?:jpe?g|png|webp|gif)$/i)?.[0].toLowerCase() || "";
+      newCoverPath = `${crypto.randomUUID()}${extension}`;
+      await uploadStorageObject(coverBucket, newCoverPath, cover);
     }
     const payload = {
       title: form.get("title"),
@@ -379,22 +488,40 @@ $("#resourceForm").addEventListener("submit", async event => {
       content: form.get("content") || "",
       version: form.get("version") || "1.0.0",
       icon: form.get("icon") || "NEW",
-      member_only: form.get("memberOnly") === "on",
-      color: ["blue", "violet", "orange", "green", "cyan", "rose"][Math.floor(Math.random() * 6)],
-      file_path: filePath,
-      file_name: file?.size ? file.name : null,
-      file_type: file?.size ? file.type || "application/octet-stream" : null,
-      file_size: file?.size || null,
+      member_only: form.get("memberOnly") === "true",
     };
-    await supabaseRequest("/rest/v1/resources", { method: "POST", auth: true, body: payload, headers: { Prefer: "return=minimal" } });
+    if (file?.size) Object.assign(payload, { file_path: newFilePath, file_name: file.name, file_type: file.type || "application/octet-stream", file_size: file.size });
+    if (cover?.size) Object.assign(payload, { cover_path: newCoverPath, cover_name: cover.name, cover_type: cover.type });
+    else if (editingResource && removeCover) Object.assign(payload, { cover_path: null, cover_name: null, cover_type: null });
+
+    if (editingResource) {
+      payload.updated_at = new Date().toISOString();
+      await supabaseRequest(`/rest/v1/resources?id=eq.${encodeURIComponent(editingResource.id)}`, { method: "PATCH", auth: true, body: payload, headers: { Prefer: "return=minimal" } });
+    } else {
+      Object.assign(payload, {
+        color: ["blue", "violet", "orange", "green", "cyan", "rose"][Math.floor(Math.random() * 6)],
+        file_path: newFilePath,
+        file_name: file?.size ? file.name : null,
+        file_type: file?.size ? file.type || "application/octet-stream" : null,
+        file_size: file?.size || null,
+      });
+      await supabaseRequest("/rest/v1/resources", { method: "POST", auth: true, body: payload, headers: { Prefer: "return=minimal" } });
+    }
     resourceSaved = true;
-    formElement.reset();
-    $("#adminError").textContent = "";
-    showToast("资源发布成功");
+    if (editingResource && file?.size && editingResource.filePath) {
+      try { await removeStorageObject(editingResource.filePath, { ignoreMissing: true }); } catch { /* 新文件已生效，旧文件可稍后清理 */ }
+    }
+    if (editingResource && (cover?.size || removeCover) && editingResource.coverPath) {
+      try { await removeStorageObject(editingResource.coverPath, { ignoreMissing: true, storageBucket: coverBucket }); } catch { /* 新封面已生效，旧封面可稍后清理 */ }
+    }
+    const successMessage = editingResource ? "资源更改已保存" : "资源发布成功";
+    resetResourceForm();
     await loadResources();
     await renderAdminResources();
+    showToast(successMessage);
   } catch (error) {
-    if (filePath && !resourceSaved) { try { await removeStorageObject(filePath); } catch { /* 保留原始错误 */ } }
+    if (newFilePath && !resourceSaved) { try { await removeStorageObject(newFilePath); } catch { /* 保留原始错误 */ } }
+    if (newCoverPath && !resourceSaved) { try { await removeStorageObject(newCoverPath, { storageBucket: coverBucket }); } catch { /* 保留原始错误 */ } }
     $("#adminError").textContent = friendlyError(error);
   }
 });
@@ -409,5 +536,10 @@ try {
 
 handleAuthShortcut();
 renderCategories();
-loadUser();
-loadResources();
+
+async function initialize() {
+  await loadUser();
+  await loadResources();
+}
+
+initialize();

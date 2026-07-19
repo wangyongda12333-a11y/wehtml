@@ -26,9 +26,19 @@ create table if not exists public.resources (
   file_name text,
   file_type text,
   file_size bigint check (file_size is null or file_size between 0 and 52428800),
+  cover_path text,
+  cover_name text,
+  cover_type text,
   created_by uuid references auth.users(id) on delete set null default auth.uid(),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+
+alter table public.resources add column if not exists cover_path text;
+alter table public.resources add column if not exists cover_name text;
+alter table public.resources add column if not exists cover_type text;
+alter table public.resources add column if not exists updated_at timestamptz not null default now();
+create unique index if not exists resources_cover_path_key on public.resources (cover_path) where cover_path is not null;
 
 create or replace function public.handle_new_auth_user()
 returns trigger
@@ -131,7 +141,7 @@ drop policy if exists "resources_public_read" on public.resources;
 create policy "resources_public_read"
 on public.resources for select
 to anon, authenticated
-using (true);
+using (member_only = false or public.is_member());
 
 drop policy if exists "resources_admin_insert" on public.resources;
 create policy "resources_admin_insert"
@@ -181,6 +191,23 @@ create policy "resource_files_admin_delete"
 on storage.objects for delete
 to authenticated
 using (bucket_id = 'resources' and public.is_admin());
+
+insert into storage.buckets (id, name, public, file_size_limit)
+values ('resource-covers', 'resource-covers', true, 5242880)
+on conflict (id) do update
+set public = true, file_size_limit = excluded.file_size_limit;
+
+drop policy if exists "resource_covers_admin_insert" on storage.objects;
+create policy "resource_covers_admin_insert"
+on storage.objects for insert
+to authenticated
+with check (bucket_id = 'resource-covers' and public.is_admin());
+
+drop policy if exists "resource_covers_admin_delete" on storage.objects;
+create policy "resource_covers_admin_delete"
+on storage.objects for delete
+to authenticated
+using (bucket_id = 'resource-covers' and public.is_admin());
 
 -- 创建首位管理员：
 -- 1. Dashboard -> Authentication -> Users 中选择 Create new user，邮箱填写：你的账号@example.com

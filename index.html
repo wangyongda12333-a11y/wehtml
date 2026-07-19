@@ -93,7 +93,32 @@
     </div>
 
     <div class="modal-backdrop" id="adminModal" hidden>
-      <section class="modal admin-modal" role="dialog" aria-modal="true" aria-labelledby="adminTitle"><button class="modal-close" data-close-modal>×</button><div class="admin-head"><div><p class="eyebrow">ADMIN CONSOLE</p><h2 id="adminTitle">资源管理</h2></div><span>仅管理员可见</span></div><div class="admin-layout"><form id="resourceForm"><label>资源名称<input name="title" required maxlength="80" placeholder="例如：FocusFlow" /></label><div class="form-grid"><label>平台<select name="category"><option>Windows</option><option>MacOS</option><option>Android</option><option>Chrome</option></select></label><label>子分类<input name="subcategory" placeholder="效率办公" /></label></div><label>简介<textarea name="description" required maxlength="240" rows="3" placeholder="简要说明用途与特点"></textarea></label><label>详细文本<textarea name="content" maxlength="5000" rows="5" placeholder="安装方法、使用说明或其他正文内容"></textarea></label><div class="form-grid"><label>版本<input name="version" value="1.0.0" /></label><label>图标文字<input name="icon" maxlength="4" value="NEW" /></label></div><label class="file-field">资源文件（免费版最大 50 MB）<input name="file" type="file" /></label><label class="check-field"><input name="memberOnly" type="checkbox" /> 仅会员可下载</label><p class="form-error" id="adminError"></p><button class="primary-button" type="submit">发布资源 <span>＋</span></button></form><div class="admin-resources"><h3>创建会员账号</h3><form id="memberForm" class="member-create-form"><div class="form-grid"><label>会员账号<input name="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]+" autocomplete="off" placeholder="字母、数字或下划线" /></label><label>初始密码<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="至少 8 位" /></label></div><p class="form-error" id="memberError"></p><button class="primary-button" type="submit">创建会员 <span>＋</span></button></form><h3 class="user-heading">会员账号</h3><div id="adminUserList"></div><h3 class="resource-list-heading">已发布资源</h3><div id="adminResourceList"></div></div></div></section>
+      <section class="modal admin-modal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+        <button class="modal-close" data-close-modal>×</button>
+        <div class="admin-head"><div><p class="eyebrow">ADMIN CONSOLE</p><h2 id="adminTitle">资源管理</h2></div><span>仅管理员可见</span></div>
+        <div class="admin-layout">
+          <form id="resourceForm">
+            <div class="resource-form-head"><h3 id="resourceFormTitle">发布新资源</h3><button id="cancelResourceEdit" type="button" hidden>取消编辑</button></div>
+            <label>资源名称<input name="title" required maxlength="80" placeholder="例如：FocusFlow" /></label>
+            <div class="form-grid"><label>平台<select name="category"><option>Windows</option><option>MacOS</option><option>Android</option><option>Chrome</option></select></label><label>子分类<input name="subcategory" placeholder="效率办公" /></label></div>
+            <label>简介<textarea name="description" required maxlength="240" rows="3" placeholder="简要说明用途与特点"></textarea></label>
+            <label>详细文字内容<textarea name="content" maxlength="5000" rows="6" placeholder="安装方法、使用说明、文章正文或其他内容"></textarea></label>
+            <div class="form-grid"><label>版本<input name="version" value="1.0.0" /></label><label>无封面时显示的图标文字<input name="icon" maxlength="4" value="NEW" /></label></div>
+            <label>观看与下载权限<select name="memberOnly"><option value="false">所有人可观看和下载</option><option value="true">仅会员可观看和下载</option></select></label>
+            <label class="file-field">封面照片（JPG、PNG、WebP 或 GIF，最大 5 MB）<input name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/gif" /></label>
+            <div class="cover-preview" id="coverPreview" hidden><img id="coverPreviewImage" alt="封面预览" /><label class="check-field"><input name="removeCover" type="checkbox" /> 移除现有封面</label></div>
+            <label class="file-field"><span id="resourceFileLabel">资源文件（最大 50 MB）</span><input name="file" type="file" /><small id="resourceFileHint">新建资源时可不上传附件</small></label>
+            <p class="form-error" id="adminError"></p>
+            <button class="primary-button" id="resourceSubmitButton" type="submit"><span id="resourceSubmitText">发布资源</span> <b>＋</b></button>
+          </form>
+          <div class="admin-resources">
+            <h3>创建会员账号</h3>
+            <form id="memberForm" class="member-create-form"><div class="form-grid"><label>会员账号<input name="username" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]+" autocomplete="off" placeholder="字母、数字或下划线" /></label><label>初始密码<input name="password" type="password" required minlength="8" autocomplete="new-password" placeholder="至少 8 位" /></label></div><p class="form-error" id="memberError"></p><button class="primary-button" type="submit">创建会员 <span>＋</span></button></form>
+            <h3 class="user-heading">会员账号</h3><div id="adminUserList"></div>
+            <h3 class="resource-list-heading">已发布资源</h3><div id="adminResourceList"></div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <div class="toast" id="toast" role="status"></div>
