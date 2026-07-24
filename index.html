@@ -108,6 +108,11 @@
             <label class="file-field">封面照片（JPG、PNG、WebP 或 GIF，最大 5 MB）<input name="cover" type="file" accept="image/jpeg,image/png,image/webp,image/gif" /></label>
             <div class="cover-preview" id="coverPreview" hidden><img id="coverPreviewImage" alt="封面预览" /><label class="check-field"><input name="removeCover" type="checkbox" /> 移除现有封面</label></div>
             <label class="file-field"><span id="resourceFileLabel">资源文件（最大 50 MB）</span><input name="file" type="file" /><small id="resourceFileHint">新建资源时可不上传附件</small></label>
+            <div class="upload-status" id="uploadStatus" hidden>
+              <div><span id="uploadStatusText">准备上传</span><strong id="uploadPercent">0%</strong></div>
+              <progress id="uploadProgress" max="100" value="0"></progress>
+              <small>上传期间请保持此页面打开，不要重复点击发布按钮。</small>
+            </div>
             <p class="form-error" id="adminError"></p>
             <button class="primary-button" id="resourceSubmitButton" type="submit"><span id="resourceSubmitText">发布资源</span> <b>＋</b></button>
           </form>

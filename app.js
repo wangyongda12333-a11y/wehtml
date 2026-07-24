@@ -95,6 +95,21 @@ function showToast(message) {
   showToast.timer = setTimeout(() => $("#toast").classList.remove("show"), 3000);
 }
 
+function updateUploadProgress(message, percent) {
+  const value = Math.max(0, Math.min(100, Math.round(percent)));
+  $("#uploadStatus").hidden = false;
+  $("#uploadStatusText").textContent = message;
+  $("#uploadPercent").textContent = `${value}%`;
+  $("#uploadProgress").value = value;
+  $("#resourceSubmitText").textContent = `${message} ${value}%`;
+}
+
+function setResourceSubmitting(submitting) {
+  $("#resourceSubmitButton").disabled = submitting;
+  $("#cancelResourceEdit").disabled = submitting;
+  if (!submitting) $("#resourceSubmitText").textContent = state.editingResourceId ? "保存更改" : "发布资源";
+}
+
 function openModal(selector) { $(selector).hidden = false; document.body.style.overflow = "hidden"; }
 function closeModals() {
   $$(".modal-backdrop").forEach(modal => { modal.hidden = true; });
@@ -283,6 +298,10 @@ function resetResourceForm() {
   $("#coverPreview").hidden = true;
   $("#coverPreviewImage").removeAttribute("src");
   delete $("#coverPreviewImage").dataset.existingSrc;
+  $("#uploadStatus").hidden = true;
+  $("#uploadProgress").value = 0;
+  $("#uploadPercent").textContent = "0%";
+  $("#uploadStatusText").textContent = "准备上传";
   $("#adminError").textContent = "";
 }
 
@@ -333,8 +352,34 @@ async function invokeAdminUsers(payload) {
   return supabaseRequest(`/functions/v1/${encodeURIComponent(functionName)}`, { method: "POST", auth: true, body: payload });
 }
 
-async function uploadStorageObject(storageBucket, path, file) {
-  await supabaseRequest(`/storage/v1/object/${storageBucket}/${encodedStoragePath(path)}`, { method: "POST", auth: true, json: false, body: file, headers: { "Content-Type": file.type || "application/octet-stream", "x-upsert": "false" } });
+async function uploadStorageObject(storageBucket, path, file, onProgress = () => {}) {
+  const token = await accessToken();
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open("POST", `${config.url}/storage/v1/object/${storageBucket}/${encodedStoragePath(path)}`);
+    request.timeout = 10 * 60 * 1000;
+    request.setRequestHeader("apikey", config.anonKey);
+    request.setRequestHeader("Authorization", `Bearer ${token}`);
+    request.setRequestHeader("Content-Type", file.type || "application/octet-stream");
+    request.setRequestHeader("x-upsert", "false");
+    request.upload.addEventListener("progress", event => {
+      if (event.lengthComputable) onProgress(event.loaded, event.total);
+    });
+    request.addEventListener("load", () => {
+      if (request.status >= 200 && request.status < 300) {
+        onProgress(file.size, file.size);
+        resolve();
+        return;
+      }
+      let result = null;
+      try { result = JSON.parse(request.responseText); } catch { result = { message: request.responseText }; }
+      reject(new Error(friendlyError(result, `上传失败（HTTP ${request.status}）`)));
+    });
+    request.addEventListener("error", () => reject(new Error("上传网络中断，请检查网络后直接重新点击发布")));
+    request.addEventListener("timeout", () => reject(new Error("上传超过 10 分钟已超时，请保持网络稳定后重新点击发布")));
+    request.addEventListener("abort", () => reject(new Error("上传已取消")));
+    request.send(file);
+  });
 }
 
 async function removeStorageObject(path, { ignoreMissing = false, storageBucket = bucket } = {}) {
@@ -466,6 +511,10 @@ $("#resourceForm").addEventListener("submit", async event => {
   let newFilePath = null;
   let newCoverPath = null;
   let resourceSaved = false;
+  const totalUploadBytes = Number(file?.size || 0) + Number(cover?.size || 0);
+  let uploadedBytes = 0;
+  setResourceSubmitting(true);
+  updateUploadProgress("正在检查文件", 1);
   try {
     if (file?.size > 50 * 1024 * 1024) throw new Error("免费版单个文件不能超过 50 MB");
     if (cover?.size > 5 * 1024 * 1024) throw new Error("封面照片不能超过 5 MB");
@@ -473,13 +522,24 @@ $("#resourceForm").addEventListener("submit", async event => {
     if (file?.size) {
       const extension = file.name.match(/\.[A-Za-z0-9]{1,10}$/)?.[0].toLowerCase() || "";
       newFilePath = `${crypto.randomUUID()}${extension}`;
-      await uploadStorageObject(bucket, newFilePath, file);
+      const baseBytes = uploadedBytes;
+      await uploadStorageObject(bucket, newFilePath, file, loaded => {
+        const overall = totalUploadBytes ? ((baseBytes + loaded) / totalUploadBytes) * 90 : 90;
+        updateUploadProgress("正在上传资源文件", overall);
+      });
+      uploadedBytes += file.size;
     }
     if (cover?.size) {
       const extension = cover.name.match(/\.(?:jpe?g|png|webp|gif)$/i)?.[0].toLowerCase() || "";
       newCoverPath = `${crypto.randomUUID()}${extension}`;
-      await uploadStorageObject(coverBucket, newCoverPath, cover);
+      const baseBytes = uploadedBytes;
+      await uploadStorageObject(coverBucket, newCoverPath, cover, loaded => {
+        const overall = totalUploadBytes ? ((baseBytes + loaded) / totalUploadBytes) * 90 : 90;
+        updateUploadProgress("正在上传封面", overall);
+      });
+      uploadedBytes += cover.size;
     }
+    updateUploadProgress("正在保存资源信息", 95);
     const payload = {
       title: form.get("title"),
       category: form.get("category"),
@@ -508,6 +568,7 @@ $("#resourceForm").addEventListener("submit", async event => {
       await supabaseRequest("/rest/v1/resources", { method: "POST", auth: true, body: payload, headers: { Prefer: "return=minimal" } });
     }
     resourceSaved = true;
+    updateUploadProgress("正在刷新资源列表", 98);
     if (editingResource && file?.size && editingResource.filePath) {
       try { await removeStorageObject(editingResource.filePath, { ignoreMissing: true }); } catch { /* 新文件已生效，旧文件可稍后清理 */ }
     }
@@ -518,11 +579,18 @@ $("#resourceForm").addEventListener("submit", async event => {
     resetResourceForm();
     await loadResources();
     await renderAdminResources();
+    updateUploadProgress("上传完成", 100);
     showToast(successMessage);
   } catch (error) {
     if (newFilePath && !resourceSaved) { try { await removeStorageObject(newFilePath); } catch { /* 保留原始错误 */ } }
     if (newCoverPath && !resourceSaved) { try { await removeStorageObject(newCoverPath, { storageBucket: coverBucket }); } catch { /* 保留原始错误 */ } }
-    $("#adminError").textContent = friendlyError(error);
+    const message = friendlyError(error);
+    $("#adminError").textContent = message;
+    $("#uploadStatus").hidden = false;
+    $("#uploadStatusText").textContent = "上传失败，可直接重试";
+    showToast(message);
+  } finally {
+    setResourceSubmitting(false);
   }
 });
 
