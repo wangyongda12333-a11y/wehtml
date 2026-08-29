@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://wangyongda12333-a11y.github.io/wehtml/sitemap.xml
