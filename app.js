@@ -162,6 +162,7 @@ function renderCategories() {
     </button>
   `).join("");
   $("#filterRow").innerHTML = ["全部", ...categories.map(item => item.name)].map(name => `<button class="filter-button ${state.category === name ? "active" : ""}" data-category="${name}">${name}</button>`).join("");
+  document.querySelectorAll("#mainNav [data-category], #mainNav [data-category-link]").forEach(button => button.classList.toggle("active", (button.dataset.category || button.dataset.categoryLink) === state.category));
 }
 
 function visibleResources() {

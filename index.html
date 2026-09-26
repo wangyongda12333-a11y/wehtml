@@ -4,82 +4,41 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="X.Z.C 资源站——发现好用、可靠的数字工具。" />
-    <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <meta name="theme-color" content="#174f44" />
     <title>X.Z.C 资源站 · 发现好工具</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
-    <link rel="canonical" href="https://wehtml.ccwu.cc/" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="X.Z.C 资源站" />
-    <meta property="og:title" content="X.Z.C 资源站 · 发现好工具" />
-    <meta property="og:description" content="独立筛选、清晰分类、持续维护。让每一次下载都有明确的理由。" />
-    <meta property="og:url" content="https://wehtml.ccwu.cc/" />
-    <meta property="og:image" content="https://wehtml.ccwu.cc/og-cover.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:locale" content="zh_CN" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="X.Z.C 资源站 · 发现好工具" />
-    <meta name="twitter:description" content="独立筛选、清晰分类、持续维护。让每一次下载都有明确的理由。" />
-    <meta name="twitter:image" content="https://wehtml.ccwu.cc/og-cover.png" />
-
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "X.Z.C 资源站",
-      "alternateName": "X.Z.C Resource Hub",
-      "url": "https://wehtml.ccwu.cc/",
-      "description": "发现好用、可靠的数字工具。独立筛选、清晰分类、持续维护。",
-      "inLanguage": "zh-CN"
-    }
-    </script>
   </head>
-
   <body>
     <div class="announcement"><span>✦</span> 全新资源门户正在试运行，欢迎提交你的原创工具。<button id="dismissAnnouncement">×</button></div>
     <header class="site-header">
       <div class="header-inner">
-        <a class="brand" href="#"><span><strong>X.Z.C 资源站</strong><small>X.Z.C RESOURCE HUB</small></span></a>
-        <button class="mobile-menu" id="mobileMenu" aria-label="打开菜单">☰</button>
+        <div class="header-main">
+          <div class="brand-block">
+            <a class="brand" href="#"><span><strong>X.Z.C 资源站</strong><small>X.Z.C RESOURCE HUB</small></span></a>
+            <p>分享实用工具，整理真正值得保存的数字资源</p>
+          </div>
+          <div class="header-banner"><strong>数字工具精选</strong><span>清晰分类 · 持续维护 · 安全下载</span></div>
+          <label class="header-search"><span>⌕</span><input id="searchInput" type="search" placeholder="搜索资源" autocomplete="off" /></label>
+          <div class="header-actions">
+            <button class="search-trigger" id="searchFocus" aria-label="搜索">⌕</button>
+            <button class="login-button" id="loginButton">会员登录</button>
+            <button class="user-button" id="userButton" hidden><span id="userInitial">U</span><em id="userName">用户</em></button>
+            <button class="mobile-menu" id="mobileMenu" aria-label="打开菜单">☰</button>
+          </div>
+        </div>
         <nav id="mainNav" aria-label="主导航">
-          <a class="active" href="#resources">首页</a>
+          <button class="active" data-category="全部">全部资源</button>
           <button data-category-link="Windows">Windows</button>
           <button data-category-link="MacOS">MacOS</button>
           <button data-category-link="Android">Android</button>
           <button data-category-link="Chrome">Chrome</button>
         </nav>
-        <div class="header-actions">
-          <button class="search-trigger" id="searchFocus" aria-label="搜索">⌕</button>
-          <button class="login-button" id="loginButton">会员登录</button>
-          <button class="user-button" id="userButton" hidden><span id="userInitial">U</span><em id="userName">用户</em></button>
-        </div>
       </div>
     </header>
 
     <main>
-      <section class="hero">
-        <div class="hero-inner">
-          <div class="hero-copy">
-            <p class="eyebrow">CURATED DIGITAL TOOLS</p>
-            <h1>找到真正<br /><span>值得使用</span>的工具</h1>
-            <p>独立筛选、清晰分类、持续维护。<br />让每一次下载都有明确的理由。</p>
-          </div>
-          <div class="hero-panel">
-            <label class="hero-search">
-              <span>⌕</span><input id="searchInput" type="search" placeholder="搜索工具名称或功能…" autocomplete="off" /><kbd>Enter</kbd>
-            </label>
-            <div class="trending"><span>热门搜索</span><button data-query="效率">效率</button><button data-query="图片">图片</button><button data-query="文件">文件</button></div>
-            <div class="hero-stats"><div><strong id="resourceStat">0</strong><span>精选资源</span></div><div><strong>4</strong><span>平台分类</span></div><div><strong>每日</strong><span>持续整理</span></div></div>
-          </div>
-        </div>
-      </section>
-
       <section class="category-strip" aria-label="资源分类">
         <div class="category-inner" id="categoryStrip"></div>
       </section>
@@ -87,7 +46,7 @@
       <div class="layout" id="resources">
         <section class="resource-section">
           <div class="section-heading">
-            <div><p class="eyebrow">LATEST PICKS</p><h2>最近更新</h2></div>
+            <div><p class="eyebrow">LATEST PICKS</p><h2>最新资源</h2></div>
             <div class="filter-row" id="filterRow"></div>
           </div>
           <div class="resource-grid" id="resourceGrid"></div>
@@ -95,9 +54,11 @@
         </section>
 
         <aside>
+          <section class="side-card stat-card"><span>已收录资源</span><strong id="resourceStat">0</strong><small>持续整理更新</small></section>
           <section class="side-card welcome-card">
             <div class="side-icon">✦</div><p class="eyebrow">WELCOME</p><h3>嗨，探索者</h3><p>我们只整理有明确用途的数字工具，希望为你节省寻找和试错的时间。</p>
           </section>
+          <section class="side-card quick-card"><h3>热门搜索</h3><div class="trending"><button data-query="效率">效率</button><button data-query="图片">图片</button><button data-query="文件">文件</button></div></section>
           <section class="side-card member-card">
             <span class="member-orbit"></span><p class="eyebrow">X.Z.C PLUS</p><h3>解锁会员资源</h3><p>免费资源无需登录；付费资源仅限站长创建的会员账号下载。</p><button id="memberAction">会员登录 <span>→</span></button>
           </section>
