@@ -14,7 +14,7 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
 function configReady() {
-  return /^(https:\/\/[a-z0-9-]+\.supabase\.co|https:\/\/wehtml\.ccwu\.cc\/supabase)$/i.test(config.url || "") && !String(config.anonKey || "").startsWith("YOUR_");
+  return /^(https:\/\/[a-z0-9-]+\.supabase\.co|\/supabase)$/i.test(config.url || "") && !String(config.anonKey || "").startsWith("YOUR_");
 }
 
 function usernameToEmail(username) {
